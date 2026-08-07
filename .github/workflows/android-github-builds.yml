@@ -1,0 +1,110 @@
+name: Android Builds (GitHub Downloads)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-github-builds.yml"
+      - "app.json"
+      - "src/**"
+      - "package.json"
+      - "scripts/ci-android-signing.sh"
+
+concurrency:
+  group: android-github-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-android:
+    name: Build AAB + APK + Developer
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate native Android project
+        env:
+          EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Prepare CI signing keystore
+        run: bash scripts/ci-android-signing.sh
+
+      - name: Build Developer APK (debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Build Preview APK (release)
+        run: |
+          cd android
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace \
+            -Pandroid.injected.signing.store.file="$CI_ANDROID_KEYSTORE" \
+            -Pandroid.injected.signing.store.password="$CI_ANDROID_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$CI_ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$CI_ANDROID_KEY_PASSWORD"
+
+      - name: Build Production AAB
+        run: |
+          cd android
+          ./gradlew :app:bundleRelease --no-daemon --stacktrace \
+            -Pandroid.injected.signing.store.file="$CI_ANDROID_KEYSTORE" \
+            -Pandroid.injected.signing.store.password="$CI_ANDROID_STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$CI_ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$CI_ANDROID_KEY_PASSWORD"
+
+      - name: Upload Developer APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenvyarc-developer-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenvyarc-preview-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Production AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenvyarc-production-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          echo "### Download from this GitHub Actions run" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scroll to **Artifacts** at the bottom of this run page:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-developer-apk\` — Developer debug APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-preview-apk\` — Preview release APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-production-aab\` — Production AAB" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run page: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
