@@ -24,13 +24,21 @@
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "package": "com.zenvyarc.app",
-      "permissions": ["ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "ACTIVITY_RECOGNITION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ad57b97e-95a8-4072-bf76-7a06107e0b80"
+      }
+    },
+    "owner": "jeevansomu"
   }
 }
