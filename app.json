@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Zenvy Arc",
+    "slug": "zenvyarc",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/art/logo-mark.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#070605"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.zenvyarc.app",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Zenvy Arc uses motion data to count your steps automatically."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#070605",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "package": "com.zenvyarc.app",
+      "permissions": ["ACTIVITY_RECOGNITION"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
