@@ -1,0 +1,104 @@
+name: Android Builds (AAB + APK + Developer)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/android-builds.yml"
+      - "app.json"
+      - "eas.json"
+      - "src/**"
+      - "package.json"
+
+concurrency:
+  group: android-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  aab:
+    name: AAB (Production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Start AAB build
+        id: build
+        env:
+          EAS_BUILD_NO_EXPO_GO_WARNING: true
+          EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
+        run: |
+          eas build --platform android --profile production --non-interactive --no-wait --json > build.json
+          BUILD_URL=$(node -e "const b=JSON.parse(require('fs').readFileSync('build.json','utf8')); console.log('https://expo.dev/accounts/jeevansomu/projects/zenvyarc/builds/'+b.id)")
+          echo "url=$BUILD_URL" >> "$GITHUB_OUTPUT"
+          echo "### AAB build started" >> $GITHUB_STEP_SUMMARY
+          echo "Track & download: $BUILD_URL" >> $GITHUB_STEP_SUMMARY
+      - name: Print link
+        run: echo "AAB → ${{ steps.build.outputs.url }}"
+
+  apk:
+    name: APK (Preview)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Start APK build
+        id: build
+        env:
+          EAS_BUILD_NO_EXPO_GO_WARNING: true
+          EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
+        run: |
+          eas build --platform android --profile preview --non-interactive --no-wait --json > build.json
+          BUILD_URL=$(node -e "const b=JSON.parse(require('fs').readFileSync('build.json','utf8')); console.log('https://expo.dev/accounts/jeevansomu/projects/zenvyarc/builds/'+b.id)")
+          echo "url=$BUILD_URL" >> "$GITHUB_OUTPUT"
+          echo "### APK build started" >> $GITHUB_STEP_SUMMARY
+          echo "Track & download: $BUILD_URL" >> $GITHUB_STEP_SUMMARY
+      - name: Print link
+        run: echo "APK → ${{ steps.build.outputs.url }}"
+
+  developer:
+    name: Developer APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Start Developer build
+        id: build
+        env:
+          EAS_BUILD_NO_EXPO_GO_WARNING: true
+          EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
+        run: |
+          eas build --platform android --profile developer --non-interactive --no-wait --json > build.json
+          BUILD_URL=$(node -e "const b=JSON.parse(require('fs').readFileSync('build.json','utf8')); console.log('https://expo.dev/accounts/jeevansomu/projects/zenvyarc/builds/'+b.id)")
+          echo "url=$BUILD_URL" >> "$GITHUB_OUTPUT"
+          echo "### Developer build started" >> $GITHUB_STEP_SUMMARY
+          echo "Track & download: $BUILD_URL" >> $GITHUB_STEP_SUMMARY
+      - name: Print link
+        run: echo "Developer → ${{ steps.build.outputs.url }}"
