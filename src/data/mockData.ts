@@ -159,3 +159,46 @@ export function formatNumber(n: number): string {
 export function stepsToSumi(steps: number): number {
   return Math.floor((steps / 1000) * SUMI_PER_1000_STEPS);
 }
+
+export const WEEKLY = {
+  rangeLabel: 'May 5 - May 11',
+  days: [
+    { label: 'Mon', steps: 8200 },
+    { label: 'Tue', steps: 9100 },
+    { label: 'Wed', steps: 7600 },
+    { label: 'Thu', steps: 11300 },
+    { label: 'Fri', steps: 6100 },
+    { label: 'Sat', steps: 12500, best: true },
+    { label: 'Sun', steps: 7500 },
+  ],
+  totalSteps: 62300,
+  dailyAvg: 8900,
+  bestDay: { steps: 12500, label: 'Sat, May 10' },
+  weeklyGoal: 75000,
+  vsLastWeekPct: 14.8,
+  lastWeekSteps: 54200,
+  avg30Days: 56800,
+  longestStreak: { days: 6, range: 'May 5 – May 10' },
+  mountainContributionPct: 0.018,
+  sumiEarned: 623,
+  vsYesterday: 784,
+};
+
+export const GEO_GUARD = {
+  active: true,
+  message: "LOCATION VERIFIED You're on track!",
+  accuracyM: 4.2,
+  lastSync: '10:42 AM',
+};
+
+export const REWARDS = {
+  ascentSteps: 78420,
+  ascentGoal: 100000,
+  referrals: { verified: 0, goal: 5 },
+  keychain: {
+    unlocked: true,
+    addressConfirmed: true,
+    status: 'Preparing' as const,
+    statuses: ['Preparing', 'Dispatched', 'In Transit', 'Delivered'] as const,
+  },
+};

@@ -9,7 +9,8 @@ on:
       - "app.json"
       - "src/**"
       - "package.json"
-      - "scripts/ci-android-signing.sh"
+      - "scripts/**"
+      - "assets/**"
 
 concurrency:
   group: android-github-${{ github.ref }}
@@ -43,6 +44,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Bump Play-safe versionCode
+        id: version
+        run: |
+          # Play Console requires each new upload to have a HIGHER versionCode.
+          # Base from app.json + run number keeps every CI build unique & upgradeable.
+          BASE=$(node -e "console.log(require('./app.json').expo.android.versionCode || 1)")
+          CODE=$((BASE + ${{ github.run_number }}))
+          NAME=$(node -e "console.log(require('./app.json').expo.version)")
+          node -e "
+            const fs=require('fs');
+            const j=JSON.parse(fs.readFileSync('app.json','utf8'));
+            j.expo.android.versionCode=$CODE;
+            fs.writeFileSync('app.json', JSON.stringify(j,null,2)+'\n');
+          "
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Play versionName=$NAME versionCode=$CODE" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Generate native Android project
         env:
           EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
@@ -75,11 +94,31 @@ jobs:
             -Pandroid.injected.signing.key.alias="$CI_ANDROID_KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$CI_ANDROID_KEY_PASSWORD"
 
+      - name: Rename artifacts for Play Console
+        run: |
+          mkdir -p dist
+          VERSION="${{ steps.version.outputs.name }}"
+          CODE="${{ steps.version.outputs.code }}"
+          cp android/app/build/outputs/apk/debug/*.apk \
+            "dist/zenvyarc-developer-v${VERSION}-${CODE}.apk"
+          cp android/app/build/outputs/apk/release/*.apk \
+            "dist/zenvyarc-preview-v${VERSION}-${CODE}.apk"
+          cp android/app/build/outputs/bundle/release/*.aab \
+            "dist/zenvyarc-play-v${VERSION}-${CODE}.aab"
+          ls -lah dist
+          echo "### Upload this AAB to Play Console" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`zenvyarc-play-v${VERSION}-${CODE}.aab\` (versionCode **${CODE}**)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Play Console tips:" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Create a new release (or open draft)" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. Upload the **.aab** from Artifacts (not an old file)" >> "$GITHUB_STEP_SUMMARY"
+          echo "3. versionCode must be higher than any previously uploaded build" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Developer APK
         uses: actions/upload-artifact@v4
         with:
           name: zenvyarc-developer-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: dist/zenvyarc-developer-*.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -87,15 +126,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zenvyarc-preview-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: dist/zenvyarc-preview-*.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload Production AAB
+      - name: Upload Production AAB (Play Console)
         uses: actions/upload-artifact@v4
         with:
           name: zenvyarc-production-aab
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: dist/zenvyarc-play-*.aab
           if-no-files-found: error
           retention-days: 30
 
@@ -103,8 +142,8 @@ jobs:
         run: |
           echo "### Download from this GitHub Actions run" >> "$GITHUB_STEP_SUMMARY"
           echo "Scroll to **Artifacts** at the bottom of this run page:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`zenvyarc-developer-apk\` — Developer debug APK" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`zenvyarc-preview-apk\` — Preview release APK" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`zenvyarc-production-aab\` — Production AAB" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-developer-apk\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-preview-apk\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`zenvyarc-production-aab\` ← use this for Play Console" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Run page: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"

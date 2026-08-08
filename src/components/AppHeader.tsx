@@ -8,9 +8,10 @@ type Props = {
   hubBadge?: number;
   onHub?: () => void;
   onBell?: () => void;
+  onSumi?: () => void;
 };
 
-export function AppHeader({ sumi, hubBadge = 0, onHub, onBell }: Props) {
+export function AppHeader({ sumi, hubBadge = 0, onHub, onBell, onSumi }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.brand}>
@@ -21,11 +22,11 @@ export function AppHeader({ sumi, hubBadge = 0, onHub, onBell }: Props) {
         </View>
       </View>
 
-      <View style={styles.sumiPill}>
+      <Pressable style={styles.sumiPill} onPress={onSumi}>
         <Text style={styles.sumiIcon}>⏳</Text>
         <Text style={styles.sumiText}>{formatNumber(sumi)} SUMI</Text>
         <Text style={styles.sumiChevron}>›</Text>
-      </View>
+      </Pressable>
 
       <View style={styles.actions}>
         <Pressable style={styles.hubBtn} onPress={onHub}>

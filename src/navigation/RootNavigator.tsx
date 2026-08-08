@@ -4,12 +4,16 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useApp } from '../context/AppContext';
 import { LoginScreen } from '../screens/LoginScreen';
+import { RewardsScreen } from '../screens/RewardsScreen';
+import { WeeklyAscentScreen } from '../screens/WeeklyAscentScreen';
 import { MainTabs } from './MainTabs';
 import { colors } from '../theme/colors';
 
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
+  Rewards: undefined;
+  WeeklyAscent: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,7 +45,11 @@ export function RootNavigator() {
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {user ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Rewards" component={RewardsScreen} />
+            <Stack.Screen name="WeeklyAscent" component={WeeklyAscentScreen} />
+          </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
         )}
