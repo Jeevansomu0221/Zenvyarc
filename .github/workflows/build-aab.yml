@@ -5,13 +5,13 @@ on:
 
 concurrency:
   group: android-aab-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   aab:
     name: Production AAB
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -21,44 +21,66 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - uses: android-actions/setup-android@v3
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Bump versionCode
+      - name: Configure production build
         id: version
         run: |
-          BASE=$(node -e "console.log(require('./app.json').expo.android.versionCode || 1)")
-          CODE=$((BASE + ${{ github.run_number }}))
           NAME=$(node -e "console.log(require('./app.json').expo.version)")
+          # Always higher than previous Play uploads; run_number keeps it unique.
+          CODE=$((30 + ${{ github.run_number }}))
           PKG=$(node -e "console.log(require('./app.json').expo.android.package)")
+
           node -e "
-            const fs=require('fs');
-            const j=JSON.parse(fs.readFileSync('app.json','utf8'));
-            j.expo.android.versionCode=$CODE;
-            fs.writeFileSync('app.json', JSON.stringify(j,null,2)+'\n');
+            const fs = require('fs');
+            const j = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            j.expo.android.versionCode = $CODE;
+            // Store AAB must not ship expo-dev-client (huge CI slowdown).
+            j.expo.plugins = (j.expo.plugins || []).filter((p) => {
+              const name = Array.isArray(p) ? p[0] : p;
+              return name !== 'expo-dev-client';
+            });
+            fs.writeFileSync('app.json', JSON.stringify(j, null, 2) + '\n');
+            console.log(JSON.stringify({ package: j.expo.android.package, version: j.expo.version, versionCode: j.expo.android.versionCode }));
           "
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
           echo "package=$PKG" >> "$GITHUB_OUTPUT"
-          echo "### AAB build" >> "$GITHUB_STEP_SUMMARY"
-          echo "- package: \`$PKG\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- versionName: \`$NAME\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- versionCode: \`$CODE\`" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### AAB build"
+            echo "- package: \`$PKG\`"
+            echo "- versionName: \`$NAME\`"
+            echo "- versionCode: \`$CODE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Prebuild Android
         env:
           EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --platform android --no-install --clean
 
-      - name: Verify package name
+      - name: Speed up Gradle
         run: |
-          PKG=$(grep -o 'applicationId ["'\''][^"'\'']*' android/app/build.gradle | head -1 | sed 's/applicationId ["'\'']//')
+          cat >> android/gradle.properties <<'EOF'
+
+          # CI speedups — phone ABIs only (skip x86 emulators)
+          reactNativeArchitectures=armeabi-v7a,arm64-v8a
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+          org.gradle.parallel=true
+          org.gradle.caching=true
+          android.enablePngCrunchInReleaseBuilds=false
+          EOF
+
+          PKG=$(grep -E "applicationId ['\"]" android/app/build.gradle | head -1 | sed -E "s/.*applicationId ['\"]([^'\"]+)['\"].*/\1/")
           echo "Gradle applicationId=$PKG"
           test "$PKG" = "com.zenvy.arc"
 
@@ -69,7 +91,14 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew :app:bundleRelease --no-daemon --stacktrace \
+          ./gradlew :app:bundleRelease \
+            --no-daemon \
+            --stacktrace \
+            --build-cache \
+            -x lintVitalAnalyzeRelease \
+            -x lintVitalReportRelease \
+            -x lintVitalRelease \
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
             -Pandroid.injected.signing.store.file="$CI_ANDROID_KEYSTORE" \
             -Pandroid.injected.signing.store.password="$CI_ANDROID_STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$CI_ANDROID_KEY_ALIAS" \
@@ -78,11 +107,15 @@ jobs:
       - name: Package artifact
         run: |
           mkdir -p dist
-          VERSION="${{ steps.version.outputs.name }}"
+          NAME="${{ steps.version.outputs.name }}"
           CODE="${{ steps.version.outputs.code }}"
-          cp android/app/build/outputs/bundle/release/*.aab \
-            "dist/zenvyarc-play-v${VERSION}-${CODE}.aab"
+          AAB=$(ls android/app/build/outputs/bundle/release/*.aab | head -1)
+          test -n "$AAB" && test -f "$AAB"
+          OUT="dist/zenvyarc-play-v${NAME}-${CODE}.aab"
+          cp "$AAB" "$OUT"
           ls -lah dist
+          echo "### Download" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact: \`$OUT\` (package \`com.zenvy.arc\`, versionCode \`$CODE\`)" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:

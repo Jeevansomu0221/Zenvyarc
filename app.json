@@ -2,7 +2,7 @@
   "expo": {
     "name": "Zenvy Arc",
     "slug": "zenvyarc",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "versionCode": 20,
+      "versionCode": 31,
       "adaptiveIcon": {
         "backgroundColor": "#070605",
         "foregroundImage": "./assets/android-icon-foreground.png"
