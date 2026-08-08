@@ -5,7 +5,7 @@ Zenvy Arc — gamified self-improvement and fitness app.
 ## Stack
 
 - Expo (React Native) + TypeScript
-- Supabase (planned)
+- Android package: `com.zenvy.arc`
 
 ## Run locally
 
@@ -14,24 +14,20 @@ npm install
 npm run web
 ```
 
-## GitHub Actions
+## GitHub Actions (separate builds)
 
-| Workflow | What it does |
-|----------|----------------|
-| **CI** | `npm ci` + TypeScript check |
-| **Android Builds (GitHub Downloads)** | Builds AAB, APK, and developer APK on GitHub — download from **Artifacts** (no EAS) |
+Run **one** workflow at a time from **Actions**:
 
-Trigger: **Actions → Android Builds (GitHub Downloads) → Run workflow**
+| Workflow | Artifact |
+|----------|----------|
+| **Build AAB (Play Console)** | `zenvyarc-production-aab` |
+| **Build APK (Preview)** | `zenvyarc-preview-apk` |
+| **Build Developer APK** | `zenvyarc-developer-apk` |
 
-After the run finishes, scroll to **Artifacts**:
-- `zenvyarc-developer-apk`
-- `zenvyarc-preview-apk`
-- `zenvyarc-production-aab` ← upload this to Play Console
+When the run is green → scroll to **Artifacts** → download.
 
-## Play Console upload (avoid common errors)
+## Play Console
 
-1. Download the **new** `.aab` from Artifacts (named like `zenvyarc-play-v1.0.1-XX.aab`).
-2. In Play Console → Production/Testing → Create new release → **Upload the AAB**.
-3. Each build auto-bumps `versionCode` so existing users can upgrade.
-4. Do not save a release without attaching an AAB (causes “does not add or remove any app bundles”).
-5. Do not re-upload an AAB that was already used (causes upgrade / empty release errors).
+1. Run **Build AAB (Play Console)** only.
+2. Download the `.aab` (package must be `com.zenvy.arc`).
+3. Upload that AAB into a new release.

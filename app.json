@@ -13,18 +13,18 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.zenvyarc.app",
+      "bundleIdentifier": "com.zenvy.arc",
       "infoPlist": {
         "NSMotionUsageDescription": "Zenvy Arc uses motion data to count your steps automatically."
       }
     },
     "android": {
-      "versionCode": 11,
+      "versionCode": 20,
       "adaptiveIcon": {
         "backgroundColor": "#070605",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.zenvyarc.app",
+      "package": "com.zenvy.arc",
       "permissions": [
         "ACTIVITY_RECOGNITION",
         "ACCESS_COARSE_LOCATION",

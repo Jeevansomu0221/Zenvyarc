@@ -1,0 +1,79 @@
+name: Build Developer APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: android-developer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  developer:
+    name: Developer Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+
+      - name: Bump versionCode
+        id: version
+        run: |
+          BASE=$(node -e "console.log(require('./app.json').expo.android.versionCode || 1)")
+          CODE=$((BASE + ${{ github.run_number }}))
+          NAME=$(node -e "console.log(require('./app.json').expo.version)")
+          node -e "
+            const fs=require('fs');
+            const j=JSON.parse(fs.readFileSync('app.json','utf8'));
+            j.expo.android.versionCode=$CODE;
+            fs.writeFileSync('app.json', JSON.stringify(j,null,2)+'\n');
+          "
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Prebuild Android
+        env:
+          EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Verify package name
+        run: |
+          PKG=$(grep -o 'applicationId ["'\''][^"'\'']*' android/app/build.gradle | head -1 | sed 's/applicationId ["'\'']//')
+          echo "Gradle applicationId=$PKG"
+          test "$PKG" = "com.zenvy.arc"
+
+      - name: Assemble debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Package artifact
+        run: |
+          mkdir -p dist
+          VERSION="${{ steps.version.outputs.name }}"
+          CODE="${{ steps.version.outputs.code }}"
+          cp android/app/build/outputs/apk/debug/*.apk \
+            "dist/zenvyarc-developer-v${VERSION}-${CODE}.apk"
+          ls -lah dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zenvyarc-developer-apk
+          path: dist/zenvyarc-developer-*.apk
+          if-no-files-found: error
+          retention-days: 30
