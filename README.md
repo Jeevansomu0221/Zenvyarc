@@ -57,5 +57,5 @@ Play expects SHA1:
 ## Play Console upload
 
 1. Run **Build AAB (Play Console)** only.
-2. Download the `.aab` from Artifacts.
-3. Upload to a **new release** in Play Console.
+2. When the run is green, scroll to **Artifacts** at the bottom → download **`zenvyarc-production-aab`** (ZIP containing the `.aab`).
+3. Upload that `.aab` to a **new release** in Play Console.
