@@ -83,7 +83,13 @@ jobs:
           echo "Gradle applicationId=$PKG"
           test "$PKG" = "com.zenvy.arc"
 
-      - name: Prepare signing
+      - name: Prepare Play signing keystore
+        env:
+          REQUIRE_PLAY_KEYSTORE: "true"
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: bash scripts/ci-android-signing.sh
 
       - name: Bundle release AAB

@@ -25,8 +25,10 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-build-*.json
-eas-output.txt
+play-keystore-base64.txt
+credentials.json
+*.keystore
+*.jks
 
 # macOS
 .DS_Store
