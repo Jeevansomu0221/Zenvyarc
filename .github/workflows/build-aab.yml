@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   aab:
-    name: Production AAB
+    name: Production AAB (EAS signed)
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -21,110 +21,58 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v5
+      - uses: expo/expo-github-action@v8
         with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: android-actions/setup-android@v3
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Configure production build
-        id: version
+      - name: Bump versionName
         run: |
-          NAME=$(node -e "console.log(require('./app.json').expo.version)")
-          # Always higher than previous Play uploads; run_number keeps it unique.
-          CODE=$((30 + ${{ github.run_number }}))
-          PKG=$(node -e "console.log(require('./app.json').expo.android.package)")
-
           node -e "
-            const fs = require('fs');
-            const j = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            j.expo.android.versionCode = $CODE;
-            // Store AAB must not ship expo-dev-client (huge CI slowdown).
-            j.expo.plugins = (j.expo.plugins || []).filter((p) => {
-              const name = Array.isArray(p) ? p[0] : p;
-              return name !== 'expo-dev-client';
-            });
-            fs.writeFileSync('app.json', JSON.stringify(j, null, 2) + '\n');
-            console.log(JSON.stringify({ package: j.expo.android.package, version: j.expo.version, versionCode: j.expo.android.versionCode }));
+            const fs=require('fs');
+            const j=JSON.parse(fs.readFileSync('app.json','utf8'));
+            j.expo.version='1.0.3';
+            fs.writeFileSync('app.json', JSON.stringify(j,null,2)+'\n');
+            console.log('versionName', j.expo.version, 'package', j.expo.android.package);
           "
 
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
-          echo "package=$PKG" >> "$GITHUB_OUTPUT"
-          {
-            echo "### AAB build"
-            echo "- package: \`$PKG\`"
-            echo "- versionName: \`$NAME\`"
-            echo "- versionCode: \`$CODE\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Prebuild Android
+      - name: Build signed AAB on EAS
+        id: build
         env:
+          EAS_BUILD_NO_EXPO_GO_WARNING: true
           EXPO_ROUTER_DISABLE_RN_NAVIGATION_CHECK: "1"
-        run: npx expo prebuild --platform android --no-install --clean
-
-      - name: Speed up Gradle
         run: |
-          cat >> android/gradle.properties <<'EOF'
+          eas build --platform android --profile production --non-interactive --wait --json > eas-build.json 2>&1
+          cat eas-build.json | tail -20
+          node -e "
+            const fs=require('fs');
+            const raw=fs.readFileSync('eas-build.json','utf8');
+            const start=raw.indexOf('[');
+            const arr=JSON.parse(raw.slice(start));
+            const b=arr[0]||arr;
+            const url=b.artifacts?.applicationArchiveUrl||b.artifacts?.buildUrl;
+            const id=b.id;
+            const code=b.appBuildVersion;
+            const ver=b.appVersion;
+            if(!url) throw new Error('No AAB URL in build output');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'url='+url+'\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'id='+id+'\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'code='+code+'\n');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'ver='+ver+'\n');
+            console.log('AAB URL:', url);
+            console.log('versionName:', ver, 'versionCode:', code);
+          "
 
-          # CI speedups — phone ABIs only (skip x86 emulators)
-          reactNativeArchitectures=armeabi-v7a,arm64-v8a
-          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
-          org.gradle.parallel=true
-          org.gradle.caching=true
-          android.enablePngCrunchInReleaseBuilds=false
-          EOF
-
-          PKG=$(grep -E "applicationId ['\"]" android/app/build.gradle | head -1 | sed -E "s/.*applicationId ['\"]([^'\"]+)['\"].*/\1/")
-          echo "Gradle applicationId=$PKG"
-          test "$PKG" = "com.zenvy.arc"
-
-      - name: Prepare Play signing keystore
-        env:
-          REQUIRE_PLAY_KEYSTORE: "true"
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: bash scripts/ci-android-signing.sh
-
-      - name: Bundle release AAB
+      - name: Summary
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew :app:bundleRelease \
-            --no-daemon \
-            --stacktrace \
-            --build-cache \
-            -x lintVitalAnalyzeRelease \
-            -x lintVitalReportRelease \
-            -x lintVitalRelease \
-            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
-            -Pandroid.injected.signing.store.file="$CI_ANDROID_KEYSTORE" \
-            -Pandroid.injected.signing.store.password="$CI_ANDROID_STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$CI_ANDROID_KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$CI_ANDROID_KEY_PASSWORD"
-
-      - name: Package artifact
-        run: |
-          mkdir -p dist
-          NAME="${{ steps.version.outputs.name }}"
-          CODE="${{ steps.version.outputs.code }}"
-          AAB=$(ls android/app/build/outputs/bundle/release/*.aab | head -1)
-          test -n "$AAB" && test -f "$AAB"
-          OUT="dist/zenvyarc-play-v${NAME}-${CODE}.aab"
-          cp "$AAB" "$OUT"
-          ls -lah dist
-          echo "### Download" >> "$GITHUB_STEP_SUMMARY"
-          echo "Artifact: \`$OUT\` (package \`com.zenvy.arc\`, versionCode \`$CODE\`)" >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: zenvyarc-production-aab
-          path: dist/zenvyarc-play-*.aab
-          if-no-files-found: error
-          retention-days: 30
+          {
+            echo "### Play-ready AAB (EAS upload key)"
+            echo "- package: \`com.zenvy.arc\`"
+            echo "- versionName: \`${{ steps.build.outputs.ver }}\`"
+            echo "- versionCode: \`${{ steps.build.outputs.code }}\`"
+            echo "- **Download:** ${{ steps.build.outputs.url }}"
+            echo "- Build page: https://expo.dev/accounts/jeevansomu/projects/zenvyarc/builds/${{ steps.build.outputs.id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
