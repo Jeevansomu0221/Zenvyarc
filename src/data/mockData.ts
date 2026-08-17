@@ -164,12 +164,12 @@ export const WEEKLY = {
   rangeLabel: 'May 5 - May 11',
   days: [
     { label: 'Mon', steps: 8200 },
-    { label: 'Tue', steps: 9100 },
-    { label: 'Wed', steps: 7600 },
+    { label: 'Tue', steps: 9600 },
+    { label: 'Wed', steps: 6100 },
     { label: 'Thu', steps: 11300 },
-    { label: 'Fri', steps: 6100 },
+    { label: 'Fri', steps: 7800 },
     { label: 'Sat', steps: 12500, best: true },
-    { label: 'Sun', steps: 7500 },
+    { label: 'Sun', steps: 7800 },
   ],
   totalSteps: 62300,
   dailyAvg: 8900,
@@ -182,13 +182,6 @@ export const WEEKLY = {
   mountainContributionPct: 0.018,
   sumiEarned: 623,
   vsYesterday: 784,
-};
-
-export const GEO_GUARD = {
-  active: true,
-  message: "LOCATION VERIFIED You're on track!",
-  accuracyM: 4.2,
-  lastSync: '10:42 AM',
 };
 
 export const REWARDS = {

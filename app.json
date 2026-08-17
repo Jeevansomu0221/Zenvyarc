@@ -2,7 +2,7 @@
   "expo": {
     "name": "Zenvy Arc",
     "slug": "zenvyarc",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,11 +15,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.zenvy.arc",
       "infoPlist": {
-        "NSMotionUsageDescription": "Zenvy Arc uses motion data to count your steps automatically."
+        "NSMotionUsageDescription": "Zenvy Arc uses motion data to count your steps automatically.",
+        "NSLocationWhenInUseUsageDescription": "Zenvy Arc uses your location to verify walks and measure distance in km."
       }
     },
     "android": {
-      "versionCode": 31,
+      "versionCode": 32,
       "adaptiveIcon": {
         "backgroundColor": "#070605",
         "foregroundImage": "./assets/android-icon-foreground.png"
@@ -36,7 +37,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Zenvy Arc uses your location to verify walks and measure distance in km."
+        }
+      ]
     ],
     "extra": {
       "eas": {

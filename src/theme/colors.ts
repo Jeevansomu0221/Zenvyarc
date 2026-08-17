@@ -1,8 +1,8 @@
 export const colors = {
-  bg: '#070605',
-  bgElevated: '#12100C',
-  bgCard: 'rgba(22, 18, 12, 0.92)',
-  bgCardSoft: 'rgba(28, 22, 14, 0.78)',
+  bg: '#020304',
+  bgElevated: '#0A0908',
+  bgCard: 'rgba(14, 11, 8, 0.94)',
+  bgCardSoft: 'rgba(20, 16, 11, 0.82)',
   border: 'rgba(212, 160, 72, 0.28)',
   borderStrong: 'rgba(232, 176, 74, 0.55)',
   gold: '#E8B04A',

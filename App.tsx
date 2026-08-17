@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -35,7 +35,9 @@ export default function App() {
     <SafeAreaProvider>
       <AppProvider>
         <StatusBar style="light" />
-        <RootNavigator />
+        <View style={Platform.OS === 'web' ? styles.webContainer : styles.mobileContainer}>
+          <RootNavigator />
+        </View>
       </AppProvider>
     </SafeAreaProvider>
   );
@@ -47,5 +49,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mobileContainer: {
+    flex: 1,
+  },
+  webContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    backgroundColor: colors.bg,
+    overflow: 'hidden',
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(255,200,87,0.1)',
   },
 });

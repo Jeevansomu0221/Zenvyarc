@@ -34,7 +34,7 @@ jobs:
           node -e "
             const fs=require('fs');
             const j=JSON.parse(fs.readFileSync('app.json','utf8'));
-            j.expo.version='1.0.4';
+            j.expo.version='1.0.5';
             fs.writeFileSync('app.json', JSON.stringify(j,null,2)+'\n');
             console.log('versionName', j.expo.version, 'package', j.expo.android.package);
           "

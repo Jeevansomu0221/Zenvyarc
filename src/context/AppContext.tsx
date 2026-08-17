@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  assignMountain,
   DEFAULT_RITUALS,
   MountainId,
   Ritual,
@@ -49,6 +48,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setUser(parsed.user);
           setSumi(parsed.sumi ?? 12450);
           if (parsed.rituals) setRituals(parsed.rituals);
+        } else {
+          // Web preview: land on Home matching the mock (Crimson Peak)
+          setUser({
+            name: 'Citizen',
+            email: 'you@gmail.com',
+            mountainId: 'crimson',
+          });
+          setSumi(12450);
+          setRituals(DEFAULT_RITUALS);
         }
       } finally {
         setLoading(false);
@@ -65,12 +73,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [user, sumi, rituals]);
 
   const loginWithGoogle = async () => {
-    const email = 'you@gmail.com';
-    const mountainId = assignMountain(email + Date.now().toString());
     setUser({
       name: 'Citizen',
-      email,
-      mountainId,
+      email: 'you@gmail.com',
+      mountainId: 'crimson',
     });
     setSumi(12450);
     setRituals(DEFAULT_RITUALS);

@@ -11,7 +11,7 @@ import { colors } from '../theme/colors';
 
 export type RootStackParamList = {
   Login: undefined;
-  Main: undefined;
+  Main: undefined | { screen?: string };
   Rewards: undefined;
   WeeklyAscent: undefined;
 };

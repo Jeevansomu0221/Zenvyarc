@@ -28,6 +28,8 @@ yarn-error.*
 build-*.json
 eas-output.txt
 play-keystore-base64.txt
+credentials.json
+*.keystore
 
 # macOS
 .DS_Store
