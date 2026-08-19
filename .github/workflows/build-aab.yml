@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   aab:
-    name: Production AAB (EAS signed)
+    name: Production AAB (Play signed)
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
